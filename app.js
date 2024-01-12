@@ -6,6 +6,7 @@ var logger = require("morgan");
 
 const options = require("./knexfile.js");
 const knex = require("knex")(options);
+const { errorLogger, errorResponder, invalidPathHandler } = require("./middleware/errors.js");
 const cors = require('cors');
 
 var indexRouter = require("./routes/index");
@@ -35,6 +36,8 @@ app.use("/", indexRouter);
 app.use("/users", usersRouter);
 app.use('/docs', swaggerUI.serve, swaggerUI.setup(swaggerDocument))
 
+
+
 app.get("/knex", function (req, res, next) {
     req.db
     .raw("SELECT VERSION()")
@@ -46,22 +49,29 @@ app.get("/knex", function (req, res, next) {
 
 res.send("Version Logged successfully");
 });
+// Console logs the error
+app.use(errorLogger);
 
+// Responses with error status code and object
+app.use(errorResponder);
+
+// Responses with error status code for invalid routes
+app.use(invalidPathHandler);
 // catch 404 and forward to error handler
-app.use(function (req, res, next) {
-    next(createError(404));
-});
+// app.use(function (req, res, next) {
+//     next(createError(404));
+// });
 
-// error handler
-app.use(function (err, req, res, next) {
-    // set locals, only providing error in development
-    res.locals.message = err.message;
-    res.locals.error = req.app.get("env") === "development" ? err : {};
+// // error handler
+// app.use(function (err, req, res, next) {
+//     // set locals, only providing error in development
+//     res.locals.message = err.message;
+//     res.locals.error = req.app.get("env") === "development" ? err : {};
 
-    // render the error page
-    res.status(err.status || 500);
-    res.render("error");
-});
+//     // render the error page
+//     res.status(err.status || 500);
+//     res.render("error");
+// });
 
 
 module.exports = app;

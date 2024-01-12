@@ -3,46 +3,65 @@ var router = express.Router();
 
 /* GET home page. */
 router.get("/", function (req, res, next) {
-  res.render("index", { title: "Express" });
+  res.render("index", { title: "City Express Api" });
 });
 
 
 router.get("/api/city", function (req, res, next) {
-  const name = req.query.name
-  const countryCode = req.query.countryCode; //either a value or undefined
-  const limit = req.query.limit || 20;
+  const validQueries = ["name", "countryCode", "district", "limit"];
+  const allQueries = req.query;
+  const invalidQueries = Object.keys(allQueries).filter(query => !validQueries.includes(query));
+  console.log(allQueries);
 
-  if (countryCode || name) {
-    req.db
-    .from('city')
-    .select('*')
-    .where((builder) => {
-      if (countryCode) {
-        builder.where('CountryCode', '=', countryCode);
-      }
-      if (name) {
-        builder.where('Name', '=', name);
-      }
-    })
-    .orderBy('Name')
-    .offset(0)
-    .limit(limit)
-    .then((rows) => {
-      res.json({ Error: false, Message: 'Success', City: rows });
-    })
-    .catch((err) => res.json({ Error: true, Message: 'Error in MySQL query' }));
-  } else {
-    req.db
-    .from("city")
-    .select("name", "district")
-    .limit(limit)
-    .then((rows) => {
-      res.json({ Error: false, Message: "Success", City: rows });
-    })
-    .catch((err) => {
-      console.log(err);
-      res.json({ Error: true, Message: "Error in MySQL query" });
-    });
+  const { name, countryCode, district, limit } = allQueries;
+  limit = limit || 20;
+
+  try {
+    if (invalidQueries.length > 0) {
+      let error = new Error(`Invalid query parameters: ${invalidQueries.join(", ")}. Query parameters are not permitted.`);
+      error.status = 400;
+      throw error;
+    }
+
+    if (countryCode || name || district) {
+      req.db
+      .from('city')
+      .select('*')
+      .where((builder) => {
+        if (countryCode) {
+          builder.where('CountryCode', '=', countryCode);
+        }
+
+        if (name) {
+          builder.where('Name', '=', name);
+        }
+
+        if (district) {
+          builder.where("District", "=", district)
+        }
+      })
+      .orderBy('Name')
+      .offset(0)
+      .limit(limit)
+      .then((rows) => {
+        res.json({ Error: false, Message: 'Success', City: rows });
+      })
+      .catch((err) => res.json({ Error: true, Message: 'Error in MySQL query' }));
+    } else {
+      req.db
+      .from("city")
+      .select("name", "district")
+      .limit(limit)
+      .then((rows) => {
+        res.json({ Error: false, Message: "Success", City: rows });
+      })
+      .catch((err) => {
+        console.log(err);
+        res.json({ Error: true, Message: "Error in MySQL query" });
+      });
+    }
+  } catch (e) {
+    next(e);
   }
 });
 
